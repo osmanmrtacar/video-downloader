@@ -18,6 +18,22 @@ deployment.
 
 - Go 1.19+
 - yt-dlp (installed in Docker container)
+- (Optional) Proxy support via [Webshare.io](https://proxy.webshare.io/) or
+  similar
+
+## Proxy Support
+
+To use proxies for downloading videos (e.g., if your server IP is blocked), set
+the `PROXY_AUTH` environment variable with your Webshare.io API token. The app
+will fetch a list of proxies and use a random one for each download.
+
+Example (Docker):
+
+```
+docker run -e PROXY_AUTH="Token your_api_token_here" ...
+```
+
+If `PROXY_AUTH` is not set, downloads will proceed without a proxy.
 
 ## Usage
 
@@ -112,6 +128,8 @@ Response:
   use the title.
 - All URLs in descriptions are removed.
 - Videos are stored in the `videos` directory.
+- If proxy is enabled, a random proxy from your Webshare.io account is used for
+  each download.
 
 ## License
 

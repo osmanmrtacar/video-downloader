@@ -16,19 +16,30 @@ import (
 const videoDir = "videos"
 
 var DESCRIPTION_URLS = []string{"twitter.com", "x.com", "instagram.com"}
+var proxyManager *ProxyManager
 
 func main() {
 	if _, err := os.Stat(videoDir); os.IsNotExist(err) {
 		os.Mkdir(videoDir, 0755)
 	}
 
-	http.HandleFunc("/videos", handleVideos)
+	auth := os.Getenv("PROXY_AUTH")
+	proxyManager := &ProxyManager{}
+	if auth != "" {
+		proxyManager = NewProxyManager(auth)
+	} else {
+		proxyManager = nil
+	}
+
+	http.HandleFunc("/videos", func(w http.ResponseWriter, r *http.Request) {
+		handleVideos(w, r, proxyManager)
+	})
 	http.HandleFunc("/videos/", handleVideoByName)
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func handleVideos(w http.ResponseWriter, r *http.Request) {
+func handleVideos(w http.ResponseWriter, r *http.Request, pm *ProxyManager) {
 	switch r.Method {
 	case "POST":
 		var req struct {
@@ -39,7 +50,7 @@ func handleVideos(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("Invalid request body"))
 			return
 		}
-		filename, description, err := downloadVideo(req.URL)
+		filename, description, err := downloadVideo(req.URL, pm)
 		if err != nil {
 			log.Printf("POST /videos download error: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -149,7 +160,7 @@ func handleVideoByName(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func downloadVideo(url string) (filename, description string, err error) {
+func downloadVideo(url string, pm *ProxyManager) (filename, description string, err error) {
 	var printArg string
 	useDescription := false
 	for _, u := range DESCRIPTION_URLS {
@@ -163,7 +174,15 @@ func downloadVideo(url string) (filename, description string, err error) {
 	} else {
 		printArg = "title"
 	}
-	cmd := exec.Command("yt-dlp", "-q", "--no-warnings", "--no-simulate", "-o", "%(id)s.%(ext)s", url, "-S", "ext", "--print", "filename", "--print", printArg)
+	var proxyArg []string
+	if pm != nil {
+		proxy, err := pm.FetchAndGetRandomProxy()
+		if err == nil && proxy != "" {
+			proxyArg = []string{"--proxy", proxy}
+		}
+	}
+	ytArgs := append([]string{"-q", "--no-warnings", "--no-simulate", "-o", "%(id)s.%(ext)s", url, "-S", "ext", "--print", "filename", "--print", printArg}, proxyArg...)
+	cmd := exec.Command("yt-dlp", ytArgs...)
 	cmd.Dir = videoDir
 	out, err := cmd.Output()
 	if err != nil {

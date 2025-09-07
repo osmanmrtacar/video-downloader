@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -132,14 +131,7 @@ func handleVideoByName(w http.ResponseWriter, r *http.Request) {
 	filePath := filepath.Join(videoDir, filename)
 	switch r.Method {
 	case "GET":
-		f, err := os.Open(filePath)
-		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		defer f.Close()
-		w.Header().Set("Content-Type", "application/octet-stream")
-		io.Copy(w, f)
+		http.ServeFile(w, r, filePath)
 	case "DELETE":
 		if err := os.Remove(filePath); err != nil {
 			w.Header().Set("Content-Type", "application/json")

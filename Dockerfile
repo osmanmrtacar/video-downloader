@@ -3,6 +3,11 @@ FROM golang:1.25-alpine
 
 WORKDIR /app
 COPY . .
+
+ENV CGO_ENABLED=1
+RUN apk add build-base
+
+
 RUN go build -o video-downloader .
 
 # yt-dlp install

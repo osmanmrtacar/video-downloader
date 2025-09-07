@@ -16,6 +16,11 @@ const videoDir = "videos"
 var DESCRIPTION_URLS = []string{"twitter.com", "x.com", "instagram.com"}
 
 func main() {
+	// Initialize VideoDB
+	videoDB, err := NewVideoDB("videos.db")
+	if err != nil {
+		log.Fatalf("Failed to open video DB: %v", err)
+	}
 	if _, err := os.Stat(videoDir); os.IsNotExist(err) {
 		os.Mkdir(videoDir, 0755)
 	}
@@ -28,14 +33,14 @@ func main() {
 	videoManager := NewVideoManager(proxyManager, videoDir)
 
 	http.HandleFunc("/videos", func(w http.ResponseWriter, r *http.Request) {
-		handleVideos(w, r, videoManager)
+		handleVideos(w, r, videoManager, videoDB)
 	})
 	http.HandleFunc("/videos/", handleVideoByName)
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func handleVideos(w http.ResponseWriter, r *http.Request, vm *VideoManager) {
+func handleVideos(w http.ResponseWriter, r *http.Request, vm *VideoManager, videoDB *VideoDB) {
 	switch r.Method {
 	case "POST":
 		var req struct {
@@ -46,12 +51,32 @@ func handleVideos(w http.ResponseWriter, r *http.Request, vm *VideoManager) {
 			w.Write([]byte("Invalid request body"))
 			return
 		}
-		filename, description, err := vm.Download(req.URL, DESCRIPTION_URLS)
+		// Check if URL exists in DB
+		filename, description, err := videoDB.GetVideoMetadataByUrl(req.URL)
+		if err != nil {
+			log.Printf("DB error: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("DB error"))
+			return
+		}
+		if filename != "" {
+			log.Println("video already exists")
+			w.Header().Set("Content-Type", "application/json")
+			resp := map[string]string{"filename": filename, "description": description}
+			json.NewEncoder(w).Encode(resp)
+
+			return
+		}
+		filename, description, err = vm.Download(req.URL, DESCRIPTION_URLS)
 		if err != nil {
 			log.Printf("POST /videos download error: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return
+		}
+		// Save to DB
+		if err := videoDB.Save(req.URL, filename, description); err != nil {
+			log.Printf("DB save error: %v", err)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		resp := map[string]string{"filename": filename, "description": description}

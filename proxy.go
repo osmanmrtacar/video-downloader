@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -64,18 +62,4 @@ func (pm *ProxyManager) FetchProxies() error {
 	}
 	pm.Proxies = proxies
 	return nil
-}
-
-func (pm *ProxyManager) FetchAndGetRandomProxy() (string, error) {
-	pm.FetchProxies()
-
-	return pm.GetRandomProxy()
-}
-
-func (pm *ProxyManager) GetRandomProxy() (string, error) {
-	if len(pm.Proxies) == 0 {
-		return "", errors.New("no proxies available")
-	}
-	rand.Seed(time.Now().UnixNano())
-	return pm.Proxies[rand.Intn(len(pm.Proxies))], nil
 }

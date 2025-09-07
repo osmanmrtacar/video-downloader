@@ -150,19 +150,19 @@ func handleVideoByName(w http.ResponseWriter, r *http.Request) {
 }
 
 func downloadVideo(url string) (filename, description string, err error) {
-	var printArg string
-	useDescription := false
-	for _, u := range DESCRIPTION_URLS {
-		if strings.Contains(url, u) {
-			useDescription = true
-			break
-		}
-	}
-	if useDescription {
-		printArg = "description"
-	} else {
-		printArg = "title"
-	}
+	//var printArg string
+	//useDescription := false
+	// for _, u := range DESCRIPTION_URLS {
+	// 	if strings.Contains(url, u) {
+	// 		useDescription = true
+	// 		break
+	// 	}
+	// }
+	// if useDescription {
+	// 	printArg = "description"
+	// } else {
+	// 	printArg = "title"
+	// }
 	cmd := exec.Command("yt-dlp", url, "-S", "ext")
 	cmd.Dir = videoDir
 	out, err := cmd.Output()

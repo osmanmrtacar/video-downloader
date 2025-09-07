@@ -41,6 +41,7 @@ func handleVideos(w http.ResponseWriter, r *http.Request) {
 		}
 		filename, description, err := downloadVideo(req.URL)
 		if err != nil {
+			log.Printf("POST /videos download error: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return
@@ -166,6 +167,7 @@ func downloadVideo(url string) (filename, description string, err error) {
 	cmd.Dir = videoDir
 	out, err := cmd.Output()
 	if err != nil {
+		log.Printf("yt-dlp command failed: %v", err)
 		return "", "", err
 	}
 	lines := strings.Split(string(out), "\n")

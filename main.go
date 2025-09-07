@@ -163,11 +163,13 @@ func downloadVideo(url string) (filename, description string, err error) {
 	} else {
 		printArg = "title"
 	}
-	cmd := exec.Command("yt-dlp", "-q", "--no-warnings", "--no-simulate", "-o", "%(id)s.%(ext)s", url, "-S", "ext", "--print", "filename", "--print", printArg)
+	cmd := exec.Command("yt-dlp", url, "-S", "ext")
 	cmd.Dir = videoDir
 	out, err := cmd.Output()
 	if err != nil {
 		log.Printf("yt-dlp command failed: %v", err)
+		log.Printf("yt-dlp command out: %v", out)
+
 		return "", "", err
 	}
 	lines := strings.Split(string(out), "\n")
